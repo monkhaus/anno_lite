@@ -18,12 +18,14 @@ COLORS = {
     "woodcutter": (139, 69, 19),
     "sawmill": (205, 133, 63),
     "house": (100, 149, 237),
+    "farm": (34, 139, 34),
 }
 
 # Resource production rates (in seconds)
 PRODUCTION_TIMERS = {
     "woodcutter": 3,
     "sawmill": 5,
+    "farm": 5,  # Farm produces food every 5 seconds
 }
 
 # Initialize screen and font
@@ -33,7 +35,7 @@ font = pygame.font.Font(None, 24)
 
 # Game state
 grid = [[None for _ in range(COLS)] for _ in range(ROWS)]
-resources = {"wood": 0, "planks": 0}
+resources = {"wood": 0, "planks": 0, "food": 0}
 buildings = []
 selected_building = None
 
@@ -53,6 +55,8 @@ class Building:
             elif self.type == "sawmill" and resources["wood"] > 0:
                 resources["wood"] -= 1
                 resources["planks"] += 1
+            elif self.type == "farm":
+                resources["food"] += 1  # Farm produces food
             self.last_production_time = current_time
 
 # Draw grid
@@ -68,12 +72,14 @@ def draw_grid():
 def draw_hud():
     wood_text = font.render(f"Wood: {resources['wood']}", True, FONT_COLOR)
     planks_text = font.render(f"Planks: {resources['planks']}", True, FONT_COLOR)
-    instructions_text = font.render("Press W for Woodcutter, S for Sawmill, H for House, then Click to Place", True, FONT_COLOR)
+    food_text = font.render(f"Food: {resources['food']}", True, FONT_COLOR)
+    instructions_text = font.render("Press W for Woodcutter, S for Sawmill, F for Farm, H for House, then Click to Place", True, FONT_COLOR)
     selected_text = font.render(f"Selected: {selected_building if selected_building else 'None'}", True, FONT_COLOR)
     screen.blit(wood_text, (10, 10))
     screen.blit(planks_text, (10, 40))
-    screen.blit(instructions_text, (10, 70))
-    screen.blit(selected_text, (10, 100))
+    screen.blit(food_text, (10, 70))
+    screen.blit(instructions_text, (10, 100))
+    screen.blit(selected_text, (10, 130))
 
 # Main game loop
 def main():
@@ -93,6 +99,8 @@ def main():
                     selected_building = "woodcutter"
                 elif event.key == pygame.K_s:
                     selected_building = "sawmill"
+                elif event.key == pygame.K_f:
+                    selected_building = "farm"
                 elif event.key == pygame.K_h:
                     selected_building = "house"
 
@@ -104,6 +112,10 @@ def main():
                         if resources["planks"] >= 5:
                             resources["planks"] -= 5
                             grid[row][col] = selected_building
+                    elif selected_building == "farm":
+                        if resources["planks"] >= 3:  # Farms require 3 planks
+                            resources["planks"] -= 3
+                            grid[row][col] = selected_building
                     else:
                         grid[row][col] = selected_building
                         buildings.append(Building(row, col, selected_building))
@@ -111,6 +123,16 @@ def main():
         # Update buildings
         for building in buildings:
             building.produce()
+
+        # Check if houses need food
+        for row in range(ROWS):
+            for col in range(COLS):
+                if grid[row][col] == "house":
+                    if resources["food"] > 0:
+                        resources["food"] -= 1  # House consumes 1 food
+                    else:
+                        # No food available, show a message or prevent house from working
+                        pass
 
         draw_grid()
         draw_hud()
